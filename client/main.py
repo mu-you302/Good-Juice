@@ -265,7 +265,7 @@ class Model(object):
             P_n = Model.MovePos(Pos, i)
             if Model.IsOut(P_n):
                 continue
-            P_all.append(Model.MovePos(Pos, i))
+            P_all.append(Model.MovePos(P_n, i))
 
         idxs = [Model.axis2idx(*P) for P in P_all]
         return sum([self.obstacles[i] for i in idxs])
