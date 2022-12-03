@@ -477,7 +477,7 @@ class Model(object):
         X_mine = np.array(myPos)
         n_cluster = min(int(round / 60) + 1, 5)
 
-        labels, centers = kmeans(X, normalize=True, k=n_cluster)
+        labels, centers = kmeans(X, k=n_cluster)
         # 统计每一个cluster中的点数量
         num_clusters = np.bincount(labels)
         # 计算每个聚类中心离当前位置的距离
@@ -493,9 +493,16 @@ class Model(object):
         )
         cret = -0.6 * num_clusters + dist2center + 0.6 * Onum
         # cret = -0.6 * num_clusters + dist2center
-        maxIdx = np.argmin(cret)
-        self.desitination = Point(*centers[maxIdx])
-        return
+        # maxIdx = np.argmin(cret)
+        # self.desitination = Point(*centers[maxIdx])
+        # return
+        Idx = np.argsort(cret)
+        for i in Idx:
+            if centers[i][0] >= 13 or centers[i][1] <= -13:  # 防止转圈
+                continue
+            else:
+                self.desitination = Point(*centers[i])
+                return
 
     def ToDirection(P1: Point, P2: Point) -> int:
         """返回从P1移动到P2的大致方向"""
