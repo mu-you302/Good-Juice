@@ -127,9 +127,18 @@ def kmeans(data, k=3, normalize=False, limit=500):
         classifications = np.argmin(
             ((data[:, :, None] - centers.T[None, :, :]) ** 2).sum(axis=1), axis=1
         )
+        # new_centers = np.array(
+        #     [data[classifications == j, :].mean(axis=0) for j in range(k)]
+        # )
+        # 可能有一类一个样本也没有分到
         new_centers = np.array(
-            [data[classifications == j, :].mean(axis=0) for j in range(k)]
+            [
+                data[classifications == j, :].mean(axis=0)
+                for j in np.unique(classifications)
+            ]
         )
+        if new_centers.shape[0] != centers.shape[0]:
+            continue
 
         if (new_centers == centers).all():
             break
