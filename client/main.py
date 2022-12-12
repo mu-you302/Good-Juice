@@ -172,7 +172,10 @@ class Model(object):
     @staticmethod
     def Dist(P1: Point, P2: Point) -> int:
         """计算两点之间的距离"""
-        return abs(P1.x - P2.x) + abs(P1.y - P2.y)
+        # return abs(P1.x - P2.x) + abs(P1.y - P2.y)
+        return (
+            abs(P1.x - P2.x) + abs(P1.y - P2.y) + abs(P1.x + P1.y - P2.x - P2.y)
+        ) / 2
 
     @staticmethod
     def MovePos(point: Point, direction: int) -> Point:
