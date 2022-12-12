@@ -206,7 +206,7 @@ class Model(object):
             direc (int): 0-5
         """
         direcList = list(range(6))
-        direcList.remove(direcList)
+        direcList.remove(direc)
         direcList.remove((direc + 3) % 6)
         return random.choice(direcList)
 
