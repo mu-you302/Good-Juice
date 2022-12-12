@@ -492,6 +492,9 @@ class Model(object):
         labels, centers = kmeans(X, k=n_cluster)
         # 统计每一个cluster中的点数量
         num_clusters = np.bincount(labels)
+        # 直接用bincount得到的结果可能少了一个
+        if num_clusters.shape[0] != n_cluster:
+            num_clusters = np.append(num_clusters, 0)
         # 计算每个聚类中心离当前位置的距离
         dist2center = np.abs(centers - X_mine).sum(axis=1)
         # 综合考虑
@@ -504,17 +507,21 @@ class Model(object):
             np.array(num_obstacles) if round > 600 / 3 else np.zeros(dist2center.shape)
         )
         cret = -0.6 * num_clusters + dist2center + 0.6 * Onum
-        # cret = -0.6 * num_clusters + dist2center
-        # maxIdx = np.argmin(cret)
-        # self.desitination = Point(*centers[maxIdx])
-        # return
-        Idx = np.argsort(cret)
-        for i in Idx:
-            if centers[i][0] >= 13 or centers[i][1] <= -13:  # 防止转圈
-                continue
-            else:
-                self.desitination = Point(*centers[i])
-                return
+
+        maxIdx = np.argmin(cret)
+
+        # Idx = np.argsort(cret)
+        # for i in Idx:
+        #     if centers[i][0] >= 13 or centers[i][1] <= -13:  # 防止转圈
+        #         continue
+        #     else:
+        #         self.desitination = Point(*centers[i])
+        #         return
+
+        des = centers[maxIdx]
+        des[0] = min(des[0], 12)
+        des[1] = max(des[1], -12)
+        self.desitination = Point(*des)
 
     def ToDirection(P1: Point, P2: Point) -> int:
         """返回从P1移动到P2的大致方向"""
