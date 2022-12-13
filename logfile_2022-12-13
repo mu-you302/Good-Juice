@@ -4,3 +4,7 @@
 [2022-12-13 09:48:50.144] [seedcup2022] [error] connect with 0.0.0.0:9999 failed.
 [2022-12-13 09:50:25.107] [seedcup2022] [info] Read config.Get ip: 0.0.0.0, port: 9999
 [2022-12-13 09:54:39.825] [seedcup2022] [info] game over, result WIN
+[2022-12-13 15:43:13.118] [seedcup2022] [info] Read config.Get ip: 0.0.0.0, port: 9999
+[2022-12-13 15:47:20.655] [seedcup2022] [info] game over, result WIN
+[2022-12-13 15:51:04.064] [seedcup2022] [info] Read config.Get ip: 0.0.0.0, port: 9999
+[2022-12-13 15:55:08.639] [seedcup2022] [info] game over, result WIN
