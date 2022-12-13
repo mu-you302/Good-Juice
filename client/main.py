@@ -540,7 +540,6 @@ class Model(object):
                 else:
                     direc = random.choice(list(range(6)))
                 res += Model.direc2action[direc] + "k"
-            direc = random.choice(list(range(6)))
             res += Model.direc2action[direc]
 
             actionList.append(res)
@@ -552,9 +551,7 @@ class Model(object):
         # 得到6个方向的中心坐标增量
         incre = [[-2, 2], [-2, 0], [0, -2], [2, -2], [2, 0], [0, 2]]
         Add = lambda P1, P: Point(P1.x + P[0], P1.y + P[1])
-        EnemyPos = (
-            Point(self.enemyinfo["x"], self.enemyinfo["y"]) if self.enemyinfo else None
-        )
+        EnemyPos = Point(self.enemyinfo["x"], self.enemyinfo["x"])
         ContainEnemy = lambda P1, P: True if P1.x == P.x and P1.y == P.y else False
         num = [0] * 6
         for i in range(6):
