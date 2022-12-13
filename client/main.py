@@ -336,7 +336,9 @@ class Model(object):
             if SlaveAble:
                 direc = random.choice(list(range(6)))
                 res += Model.direc2action[direc] + "k"
-            # res += Model.direc2action[direc]
+            if not res:
+                direc = random.choice(list(range(6)))
+                res += Model.direc2action[direc]
 
             actionList.append(res)
 
@@ -469,8 +471,6 @@ def cliGetActionReq(characterID: int, actions):
     }
 
     actionReqs = []
-
-    # actions = input()
 
     for s in get_action(actions):
         actionReq = ActionReq(characterID, *str2action[s])

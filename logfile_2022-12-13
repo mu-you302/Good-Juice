@@ -1,0 +1,6 @@
+[2022-12-13 09:41:16.790] [seedcup2022] [info] Read config.Get ip: 0.0.0.0, port: 9999
+[2022-12-13 09:45:38.301] [seedcup2022] [info] game over, result WIN
+[2022-12-13 09:48:50.142] [seedcup2022] [info] Read config.Get ip: 0.0.0.0, port: 9999
+[2022-12-13 09:48:50.144] [seedcup2022] [error] connect with 0.0.0.0:9999 failed.
+[2022-12-13 09:50:25.107] [seedcup2022] [info] Read config.Get ip: 0.0.0.0, port: 9999
+[2022-12-13 09:54:39.825] [seedcup2022] [info] game over, result WIN
