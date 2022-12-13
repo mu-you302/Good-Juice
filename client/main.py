@@ -493,7 +493,7 @@ class Model(object):
         # 统计每一个cluster中的点数量
         num_clusters = np.bincount(labels)
         # 直接用bincount得到的结果可能少了一个
-        if num_clusters.shape[0] != n_cluster:
+        if num_clusters.shape[0] != centers.shape[0]:
             num_clusters = np.append(num_clusters, 0)
         # 计算每个聚类中心离当前位置的距离
         dist2center = np.abs(centers - X_mine).sum(axis=1)
