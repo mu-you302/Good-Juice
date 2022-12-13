@@ -1,0 +1,225 @@
+{
+    "data": {
+        "characters": [
+            {
+                "characterID": 0,
+                "color": 1,
+                "direction": 5,
+                "godTimeLeft": 4,
+                "hideCD": 1,
+                "hideCDLeft": 0,
+                "hp": 100,
+                "isAlive": true,
+                "isGod": true,
+                "isSneaky": false,
+                "masterWeapon": {
+                    "attackCD": 5,
+                    "attackCDLeft": 1,
+                    "weaponType": 2
+                },
+                "moveCD": 4,
+                "moveCDLeft": 0,
+                "playerID": 0,
+                "rebornTimeLeft": 0,
+                "slaveWeapon": {
+                    "attackCD": 30,
+                    "attackCDLeft": 20,
+                    "weaponType": 1
+                },
+                "x": 9,
+                "y": -3
+            },
+            {
+                "characterID": 1,
+                "color": 1,
+                "direction": 2,
+                "godTimeLeft": 4,
+                "hideCD": 1,
+                "hideCDLeft": 0,
+                "hp": 100,
+                "isAlive": true,
+                "isGod": true,
+                "isSneaky": false,
+                "masterWeapon": {
+                    "attackCD": 3,
+                    "attackCDLeft": 0,
+                    "weaponType": 1
+                },
+                "moveCD": 4,
+                "moveCDLeft": 0,
+                "playerID": 0,
+                "rebornTimeLeft": 0,
+                "slaveWeapon": {
+                    "attackCD": 50,
+                    "attackCDLeft": 41,
+                    "weaponType": 2
+                },
+                "x": 10,
+                "y": -3
+            }
+        ],
+        "color": 1,
+        "frame": 11,
+        "kill": 0,
+        "map": {
+            "blocks": [
+                { "color": 0, "frame": 11, "valid": true, "x": 5, "y": -3 },
+                { "color": 0, "frame": 11, "valid": true, "x": 6, "y": 0 },
+                { "color": 1, "frame": 11, "valid": true, "x": 6, "y": -2 },
+                { "color": 1, "frame": 11, "valid": true, "x": 6, "y": -3 },
+                { "color": 0, "frame": 11, "valid": true, "x": 6, "y": -4 },
+                { "color": 0, "frame": 11, "valid": true, "x": 7, "y": 0 },
+                { "color": 0, "frame": 11, "valid": true, "x": 7, "y": -1 },
+                { "color": 1, "frame": 11, "valid": true, "x": 7, "y": -2 },
+                { "color": 1, "frame": 11, "valid": true, "x": 7, "y": -3 },
+                { "color": 1, "frame": 11, "valid": true, "x": 7, "y": -4 },
+                { "color": 0, "frame": 11, "valid": true, "x": 7, "y": -5 },
+                { "color": 0, "frame": 11, "valid": true, "x": 8, "y": 0 },
+                { "color": 1, "frame": 11, "valid": true, "x": 8, "y": -1 },
+                { "color": 0, "frame": 11, "valid": true, "x": 8, "y": -2 },
+                { "color": 1, "frame": 11, "valid": true, "x": 8, "y": -3 },
+                { "color": 1, "frame": 11, "valid": true, "x": 8, "y": -4 },
+                { "color": 0, "frame": 11, "valid": true, "x": 8, "y": -5 },
+                { "color": 0, "frame": 11, "valid": true, "x": 8, "y": -6 },
+                { "color": 0, "frame": 11, "valid": true, "x": 9, "y": 0 },
+                { "color": 1, "frame": 11, "valid": true, "x": 9, "y": -1 },
+                { "color": 1, "frame": 11, "valid": true, "x": 9, "y": -2 },
+                {
+                    "color": 1,
+                    "frame": 11,
+                    "objs": [
+                        {
+                            "status": {
+                                "characterID": 0,
+                                "color": 1,
+                                "direction": 5,
+                                "godTimeLeft": 4,
+                                "hideCD": 1,
+                                "hideCDLeft": 0,
+                                "hp": 100,
+                                "isAlive": true,
+                                "isGod": true,
+                                "isSneaky": false,
+                                "masterWeapon": {
+                                    "attackCD": 5,
+                                    "attackCDLeft": 1,
+                                    "weaponType": 2
+                                },
+                                "moveCD": 4,
+                                "moveCDLeft": 0,
+                                "playerID": 0,
+                                "rebornTimeLeft": 0,
+                                "slaveWeapon": {
+                                    "attackCD": 30,
+                                    "attackCDLeft": 20,
+                                    "weaponType": 1
+                                },
+                                "x": 9,
+                                "y": -3
+                            },
+                            "type": 1
+                        }
+                    ],
+                    "valid": true,
+                    "x": 9,
+                    "y": -3
+                },
+                { "color": 0, "frame": 11, "valid": true, "x": 9, "y": -4 },
+                { "color": 1, "frame": 11, "valid": true, "x": 9, "y": -5 },
+                { "color": 1, "frame": 11, "valid": true, "x": 9, "y": -6 },
+                { "color": 0, "frame": 11, "valid": true, "x": 9, "y": -7 },
+                { "color": 0, "frame": 11, "valid": true, "x": 10, "y": 0 },
+                { "color": 1, "frame": 11, "valid": true, "x": 10, "y": -1 },
+                { "color": 1, "frame": 11, "valid": true, "x": 10, "y": -2 },
+                {
+                    "color": 0,
+                    "frame": 11,
+                    "objs": [
+                        {
+                            "status": {
+                                "characterID": 1,
+                                "color": 1,
+                                "direction": 2,
+                                "godTimeLeft": 4,
+                                "hideCD": 1,
+                                "hideCDLeft": 0,
+                                "hp": 100,
+                                "isAlive": true,
+                                "isGod": true,
+                                "isSneaky": false,
+                                "masterWeapon": {
+                                    "attackCD": 3,
+                                    "attackCDLeft": 0,
+                                    "weaponType": 1
+                                },
+                                "moveCD": 4,
+                                "moveCDLeft": 0,
+                                "playerID": 0,
+                                "rebornTimeLeft": 0,
+                                "slaveWeapon": {
+                                    "attackCD": 50,
+                                    "attackCDLeft": 41,
+                                    "weaponType": 2
+                                },
+                                "x": 10,
+                                "y": -3
+                            },
+                            "type": 1
+                        }
+                    ],
+                    "valid": true,
+                    "x": 10,
+                    "y": -3
+                },
+                { "color": 1, "frame": 11, "valid": true, "x": 10, "y": -4 },
+                { "color": 1, "frame": 11, "valid": true, "x": 10, "y": -5 },
+                { "color": 1, "frame": 11, "valid": true, "x": 10, "y": -6 },
+                { "color": 1, "frame": 11, "valid": true, "x": 10, "y": -7 },
+                { "color": 1, "frame": 11, "valid": true, "x": 10, "y": -8 },
+                { "color": 1, "frame": 11, "valid": true, "x": 10, "y": -9 },
+                { "color": 1, "frame": 11, "valid": true, "x": 10, "y": -10 },
+                { "color": 1, "frame": 11, "valid": true, "x": 10, "y": -11 },
+                { "color": 0, "frame": 11, "valid": true, "x": 11, "y": 0 },
+                { "color": 1, "frame": 11, "valid": true, "x": 11, "y": -1 },
+                { "color": 1, "frame": 11, "valid": true, "x": 11, "y": -2 },
+                {
+                    "color": 0,
+                    "frame": 11,
+                    "objs": [
+                        {
+                            "status": { "playerID": 0, "weaponType": 2 },
+                            "type": 3
+                        }
+                    ],
+                    "valid": true,
+                    "x": 11,
+                    "y": -3
+                },
+                { "color": 0, "frame": 11, "valid": true, "x": 11, "y": -4 },
+                { "color": 0, "frame": 11, "valid": true, "x": 11, "y": -5 },
+                { "color": 1, "frame": 11, "valid": true, "x": 11, "y": -6 },
+                { "color": 1, "frame": 11, "valid": true, "x": 11, "y": -7 },
+                { "color": 0, "frame": 11, "valid": true, "x": 11, "y": -8 },
+                { "color": 0, "frame": 11, "valid": true, "x": 12, "y": -1 },
+                { "color": 0, "frame": 11, "valid": true, "x": 12, "y": -2 },
+                { "color": 1, "frame": 11, "valid": true, "x": 12, "y": -3 },
+                { "color": 0, "frame": 11, "valid": true, "x": 12, "y": -5 },
+                { "color": 0, "frame": 11, "valid": true, "x": 12, "y": -6 },
+                { "color": 0, "frame": 11, "valid": true, "x": 12, "y": -7 },
+                { "color": 0, "frame": 11, "valid": true, "x": 12, "y": -8 },
+                { "color": 0, "frame": 11, "valid": true, "x": 13, "y": -2 },
+                { "color": 0, "frame": 11, "valid": true, "x": 13, "y": -3 },
+                { "color": 0, "frame": 11, "valid": true, "x": 13, "y": -6 },
+                { "color": 0, "frame": 11, "valid": true, "x": 13, "y": -7 },
+                { "color": 0, "frame": 11, "valid": true, "x": 13, "y": -8 },
+                { "color": 0, "frame": 11, "valid": true, "x": 14, "y": -3 },
+                { "color": 0, "frame": 11, "valid": true, "x": 14, "y": -7 },
+                { "color": 0, "frame": 11, "valid": true, "x": 14, "y": -8 },
+                { "color": 0, "frame": 11, "valid": true, "x": 15, "y": -8 }
+            ]
+        },
+        "playerID": 0,
+        "score": 28
+    },
+    "type": 3
+}

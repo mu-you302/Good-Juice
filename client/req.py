@@ -3,8 +3,7 @@ from typing import Union, List
 
 
 class ActionType(JsonIntEnum):
-    """Action space.
-    移动，转向，（解除）潜伏，主\从武器攻击  """
+    """Action space."""
 
     Move = 1
     TurnAround = 2
@@ -27,8 +26,7 @@ class EmptyActionParam(ActionParam):
 
 
 class TurnAroundActionParam(ActionParam):
-    """Action param only for TurnAround Action.
-        Six direction. """
+    """Action param only for TurnAround Action."""
 
     def __init__(self, turnAroundDirec: Direction) -> None:
         """
@@ -41,8 +39,7 @@ class TurnAroundActionParam(ActionParam):
 
 
 class InitReq(JsonBase):
-    """Init request payload.
-    Select the M and S weapon. """
+    """Init request payload."""
 
     def __init__(
         self,
@@ -55,8 +52,7 @@ class InitReq(JsonBase):
 
 
 class ActionReq(JsonBase):
-    """Action request payload.
-    Send the movement request. """
+    """Action request payload."""
 
     def __init__(
         self, characterID: int, actionType: ActionType, actionParam: ActionParam

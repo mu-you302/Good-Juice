@@ -1,8 +1,6 @@
 from base import *
 from typing import Union, List
 
-# 使用Union[Str, List] 就相当于 str or list
-
 
 class Weapon(JsonBase):
     def __init__(
@@ -47,6 +45,8 @@ class Character(JsonBase):
         direction: Direction = Direction.Above,
         color: ColorType = ColorType.White,
         hp: int = 0,
+        hideCD: int = 0,
+        hideCDLeft: int = 0,
         moveCD: int = 0,
         moveCDLeft: int = 0,
         isAlive: bool = True,
@@ -65,6 +65,8 @@ class Character(JsonBase):
         self.direction = direction
         self.color = color
         self.hp = hp
+        self.hideCD = hideCD
+        self.hideCDLeft = hideCDLeft
         self.moveCD = moveCD
         self.moveCDLeft = moveCDLeft
         self.isAlive = isAlive
@@ -108,7 +110,7 @@ class Obj(JsonBase):
 
     def from_json(self, j: str):
         d = json.loads(j)
-        self.type = self.type.from_json(d.pop("type"))  # pop移除最后一个元素并返回
+        self.type = self.type.from_json(d.pop("type"))
         status = d.pop("status")
         if self.type == ObjType.Character:
             self.status = Character().from_json(json.dumps(status))

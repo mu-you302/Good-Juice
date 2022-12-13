@@ -29,7 +29,6 @@ logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
 
 # fp = open("./resp.json", "w+")
-
 # record the context of global data
 gContext = {
     "playerID": None,
@@ -84,6 +83,8 @@ class Client(object):
         msg = json.dumps(req, cls=JsonEncoder).encode("utf-8")
         length = len(msg)
         self.socket.sendall(length.to_bytes(8, sys.byteorder) + msg)
+        # uncomment this will show req packet
+        # logger.info(f"send PacketReq, content: {msg}")
         return
 
     def recv(self):
@@ -114,68 +115,27 @@ class Client(object):
         return True
 
 
-def kmeans(data, k=3, normalize=False, limit=500):
-    """基于numpy实现kmeans聚类"""
-    if normalize:
-        stats = (data.mean(axis=0), data.std(axis=0))
-        data = (data - stats[0]) / stats[1]
-
-    np.random.shuffle(data)
-    centers = data[:k]
-
-    for i in range(limit):
-        classifications = np.argmin(
-            ((data[:, :, None] - centers.T[None, :, :]) ** 2).sum(axis=1), axis=1
-        )
-        # new_centers = np.array(
-        #     [data[classifications == j, :].mean(axis=0) for j in range(k)]
-        # )
-        # 可能有一类一个样本也没有分到
-        new_centers = np.array(
-            [
-                data[classifications == j, :].mean(axis=0)
-                for j in np.unique(classifications)
-            ]
-        )
-        if new_centers.shape[0] != centers.shape[0]:
-            continue
-
-        if (new_centers == centers).all():
-            break
-        else:
-            centers = new_centers
-
-    if normalize:
-        centers = centers * stats[1] + stats[0]
-
-    return classifications, centers
-
-
 class Model(object):
     direc2action = {0: "w", 1: "e", 2: "d", 3: "x", 4: "z", 5: "a"}
-    iterNum = 0
-    InitCall = True  # 区分是否为第一次调用
 
-    def __init__(self, attr: dict) -> None:
-        # 其中坐标的存储方式为[[x, y]...]
+    def __init__(self, chars: list) -> None:
+        # 其中坐标的存储方式为[[x, y], ...]
         self.mapinfo = {
             "notmine": [],  # 对方占领的或者空白的
             "buff_move": [],
             "buff_hp": [],
         }
-        self.obstacles = [False] * (16 * 16)  # 地图中的障碍是不变的
+        self.blocks = [None] * (24 * 24)
         self.enemyinfo = None
         self.color = None
-        self.attr = attr
+        self.char1 = chars[0]
+        self.char2 = chars[1]
         self.desitination = None
 
     @staticmethod
     def Dist(P1: Point, P2: Point) -> int:
         """计算两点之间的距离"""
-        # return abs(P1.x - P2.x) + abs(P1.y - P2.y)
-        return (
-            abs(P1.x - P2.x) + abs(P1.y - P2.y) + abs(P1.x + P1.y - P2.x - P2.y)
-        ) / 2
+        return abs(P1.x - P2.x) + abs(P1.y - P2.y)
 
     @staticmethod
     def MovePos(point: Point, direction: int) -> Point:
@@ -213,14 +173,14 @@ class Model(object):
     @staticmethod
     def IsOut(point: Point) -> bool:
         """判断坐标是否超出界限"""
-        return point.x < 0 or point.x > 15 or point.y > 0 or point.y < -15
+        return point.x < 0 or point.x > 23 or point.y > 0 or point.y < -23
 
     @staticmethod
     def axis2idx(x, y) -> int:
         """根据坐标返回在数组中的索引
-        地图中的格子排列:x=0, y=0~-15,x=1...所以[x, y] 在数组中对应的下标为 x*16-y
+        地图中的格子排列:x=0, y=0~-23,x=1...所以[x, y] 在数组中对应的下标为 x*24-y
         """
-        return 16 * x - y
+        return 24 * x - y
 
     def ExistSlave(self, Pos: Point, blocks: list[dict]) -> bool:
         """判断以Pos为中心的一圈中是否存在SlaveWeapon
@@ -262,27 +222,7 @@ class Model(object):
 
         return False
 
-    def ObstacleNums(self, Pos: list[int]) -> int:
-        """计算一个点周围的障碍总数
-
-        Args:
-            Pos (list[int]): _description_
-
-        Returns:
-            int: _description_
-        """
-        Pos = Point(Pos[0], Pos[1])
-        P_all = [Pos]
-        for i in range(6):
-            P_n = Model.MovePos(Pos, i)
-            if Model.IsOut(P_n):
-                continue
-            P_all.append(P_n)
-
-        idxs = [Model.axis2idx(*P) for P in P_all]
-        return sum([self.obstacles[i] for i in idxs])
-
-    def action(self, jsonCon: dict) -> str:
+    def action1(self, jsonCon: dict) -> str:
         """返回动作序列
 
         Args:
@@ -366,8 +306,41 @@ class Model(object):
         Model.iterNum += 1
         if Model.iterNum == 6:
             Model.iterNum = 0
-            self.iterMap(blocks)  # 每6 frame进行一次全地图迭代
+            self.iterMap(blocks)
         return res
+
+    def action(self, jsonCon: dict) -> str:
+        """返回两个角色应该采取的动作"""
+
+        if jsonCon["type"] == PacketType.GameOver:
+            return ""
+
+        actionList = []
+
+        for i in range(2):
+            res = ""
+            attri = jsonCon["data"]["characters"][0]
+            if self.color is None:
+                self.color = attri["color"]
+
+            MoveAble = attri["moveCDLeft"] == 0  # 判断是否能移动
+            MasterAble = attri["masterWeapon"]["attackCDLeft"] == 0
+            SlaveAble = attri["slaveWeapon"]["attackCDLeft"] == 0
+
+            if MoveAble:
+                direc = random.choice(list(range(6)))
+                res += Model.direc2action[direc] + "s"
+            if MasterAble:
+                direc = random.choice(list(range(6)))
+                res += Model.direc2action[direc] + "j"
+            if SlaveAble:
+                direc = random.choice(list(range(6)))
+                res += Model.direc2action[direc] + "k"
+            res += Model.direc2action[direc]
+
+            actionList.append(res)
+
+        return actionList
 
     def DurianDirec(self, myPos: Point, blocks: list[dict]) -> int:
         """返回释放猕猴桃的最佳方向"""
@@ -413,44 +386,6 @@ class Model(object):
         block = blocks[idx]
         return (not self.obstacles[idx]) and block["color"] != self.color
 
-    def iterMap(self, blocks: list[dict], init: bool = False):
-        """遍历地图中的blocks数组获取信息
-
-        Args:
-            blocks (list[dict]): length:16*16
-            call:self.iterMap(jsonCon["data"]["map"]["blocks"])
-            init: if it's the fitst call
-        """
-        # 先将已有的信息清空
-        for v in self.mapinfo.values():
-            v.clear()
-
-        for block in blocks:
-            if not block["valid"]:
-                if Model.InitCall:
-                    idx = Model.axis2idx(block["x"], block["y"])
-                    self.obstacles[idx] = True
-                else:
-                    continue
-            if block["color"] != self.color:
-                self.mapinfo["notmine"].append([block["x"], block["y"]])
-            if "objs" in block:  # 有特殊单位
-                obj = block["objs"][-1]
-                if (
-                    obj["type"] == 1
-                    and obj["status"]["playerID"] != self.attr["playerID"]
-                ):
-                    self.enemyinfo = obj["status"]  # 记录敌方信息
-                elif obj["type"] == 2 and obj["status"]["buffType"] == 1:
-                    self.mapinfo["buff_move"].append([block["x"], block["y"]])
-                elif obj["type"] == 2 and obj["status"]["buffType"] == 2:
-                    self.mapinfo["buff_hp"].append([block["x"], block["y"]])
-
-        if init:
-            Model.InitCall = False
-
-        return
-
     def GetDestination(self, myPos: Point, round: int) -> None:
         """计算下一个要前往的目标点
 
@@ -485,44 +420,6 @@ class Model(object):
                 self.desitination = Point(*self.mapinfo["buff_move"][idx])
                 return
 
-        X = np.array(self.mapinfo["notmine"])
-        X_mine = np.array(myPos)
-        n_cluster = min(int(round / 60) + 1, 5)
-
-        labels, centers = kmeans(X, k=n_cluster)
-        # 统计每一个cluster中的点数量
-        num_clusters = np.bincount(labels)
-        # 直接用bincount得到的结果可能少了一个
-        if num_clusters.shape[0] != n_cluster:
-            num_clusters = np.append(num_clusters, 0)
-        # 计算每个聚类中心离当前位置的距离
-        dist2center = np.abs(centers - X_mine).sum(axis=1)
-        # 综合考虑
-        num_obstacles = []
-        for i in centers:
-            num_obstacles.append(self.ObstacleNums(i.astype(np.int32)))
-
-        # 计算目标点周围的障碍数，防止进圈卡住
-        Onum = (
-            np.array(num_obstacles) if round > 600 / 3 else np.zeros(dist2center.shape)
-        )
-        cret = -0.6 * num_clusters + dist2center + 0.6 * Onum
-
-        maxIdx = np.argmin(cret)
-
-        # Idx = np.argsort(cret)
-        # for i in Idx:
-        #     if centers[i][0] >= 13 or centers[i][1] <= -13:  # 防止转圈
-        #         continue
-        #     else:
-        #         self.desitination = Point(*centers[i])
-        #         return
-
-        des = centers[maxIdx]
-        des[0] = min(des[0], 12)
-        des[1] = max(des[1], -12)
-        self.desitination = Point(*des)
-
     def ToDirection(P1: Point, P2: Point) -> int:
         """返回从P1移动到P2的大致方向"""
         if P2.x >= P1.x and P2.y >= P1.y:
@@ -535,19 +432,17 @@ class Model(object):
             return random.choice([0, 1, 5])
 
 
-def cliGetInitReq():
+def cliGetInitReq(master: int, slave: int):
     """Get init request from user input."""
-    # masterWeaponType = input("Make choices!\nmaster weapon type: [select from {1-2}]: ")
-    masterWeaponType = 2
-    # slaveWeaponType = input("slave weapon type: [select from {1-2}]: ")
-    slaveWeaponType = 1
+    masterWeaponType = str(master)  # 西瓜为1，榴莲为2
+    slaveWeaponType = str(slave)  # 猕猴桃1，仙人掌2
     return InitReq(
         MasterWeaponType(int(masterWeaponType)), SlaveWeaponType(int(slaveWeaponType))
     )
 
 
-def cliGetActionReq(characterID: int, actions: str):
-    """Get action request according to actions.
+def cliGetActionReq(characterID: int, actions):
+    """Get action request from user input.
 
     Args:
         characterID (int): Character's id that do actions.
@@ -593,6 +488,7 @@ def refreshUI(ui: UI, packet: PacketResp):
         ui.characters = data.characters
         ui.score = data.score
         ui.kill = data.kill
+        ui.frame = data.frame
 
         for block in data.map.blocks:
             if len(block.objs):
@@ -601,6 +497,7 @@ def refreshUI(ui: UI, packet: PacketResp):
                     "y": block.y,
                     "color": block.color,
                     "valid": block.valid,
+                    "frame": block.frame,
                     "obj": block.objs[-1].type,
                     "data": block.objs[-1].status,
                 }
@@ -610,6 +507,7 @@ def refreshUI(ui: UI, packet: PacketResp):
                     "y": block.y,
                     "color": block.color,
                     "valid": block.valid,
+                    "frame": block.frame,
                     "obj": ObjType.Null,
                 }
     subprocess.run(["clear"])
@@ -624,44 +522,45 @@ def recvAndRefresh(ui: UI, client: Client):
 
     if resp.type == PacketType.ActionResp:
         if len(resp.data.characters) and not gContext["gameBeginFlag"]:
-            gContext["characterID"] = resp.data.characters[-1].characterID
+            gContext["characterID"] = [
+                character.characterID for character in resp.data.characters
+            ]
             gContext["playerID"] = resp.data.playerID
             gContext["gameBeginFlag"] = True
 
-            model = Model(res["data"]["characters"][-1])
-            model.iterMap(res["data"]["map"]["blocks"], init=True)  # 遍历map
+            model = Model(res["data"]["characters"])
+            # model.iterMap(res["data"]["map"]["blocks"], init=True)  # 遍历map
 
     while resp.type != PacketType.GameOver:
         resp, res = client.recv()
-
-        # 模型决策
-        actionStr = model.action(res)
-        action = cliGetActionReq(gContext["characterID"], actionStr)
-        actionPacket = PacketReq(PacketType.ActionReq, action)
-        client.send(actionPacket)
-
         refreshUI(ui, resp)
+
+        actionStr = model.action(res)
+        # 两个角色分别发送
+        for i in range(2):
+            action = cliGetActionReq(gContext["characterID"][i], actionStr[i])
+            actionPacket = PacketReq(PacketType.ActionReq, action)
+            client.send(actionPacket)
 
     refreshUI(ui, resp)
     print(f"Game Over!")
 
     for (idx, score) in enumerate(resp.data.scores):
         if gContext["playerID"] == idx:
-            print(f"You've got \33[1m{score} score\33[0m")
+            print(f"You've got {score} score.")
         else:
-            print(f"The other player has got \33[1m{score} score \33[0m")
+            print(f"The other player has got {score} score.")
 
     if resp.data.result == ResultType.Win:
-        print("\33[1mCongratulations! You win! \33[0m")
+        print("Congratulations! You win! ")
     elif resp.data.result == ResultType.Tie:
-        print("\33[1mEvenly matched opponent \33[0m")
+        print("Evenly matched opponent ")
     elif resp.data.result == ResultType.Lose:
-        print(
-            "\33[1mThe goddess of victory is not on your side this time, but there is still a chance next time!\33[0m"
-        )
+        print("@@@@@@@@ You lost! ")
 
     gContext["gameOverFlag"] = True
     print("Press any key to exit......")
+    print("=" * 30 + "\n")
 
 
 def main():
@@ -670,34 +569,39 @@ def main():
     with Client() as client:
         client.connect()
 
-        initPacket = PacketReq(PacketType.InitReq, cliGetInitReq())
+        initPacket = PacketReq(
+            PacketType.InitReq, [cliGetInitReq(2, 1), cliGetInitReq(1, 2)]
+        )
         client.send(initPacket)
-        print(gContext["prompt"])
+        # print(gContext["prompt"])
 
         # IO thread to display UI
-        t = Thread(target=recvAndRefresh, args=(ui, client))
-        t.start()
+        # t = Thread(target=recvAndRefresh, args=(ui, client))
+        # t.start()
 
-        for c in cycle(gContext["steps"]):
-            if gContext["gameBeginFlag"]:
-                break
-            print(
-                f"\r\033[0;32m{c}\033[0m \33[1mWaiting for the other player to connect...\033[0m",
-                flush=True,
-                end="",
-            )
-            sleep(0.1)
+        # for c in cycle(gContext["steps"]):
+        #     if gContext["gameBeginFlag"]:
+        #         break
+        #     print(
+        #         " Waiting for the other player to connect...",
+        #         flush=True,
+        #         end="",
+        #     )
+        #     sleep(0.1)
 
         # IO thread accepts user input and sends requests
-        # while not gContext["gameOverFlag"]:
-        #     if gContext["characterID"] is None:
+        # while gContext["gameOverFlag"] is False:
+        #     if not gContext["characterID"]:
         #         continue
-        #     if action := cliGetActionReq(gContext["characterID"]):
-        #         actionPacket = PacketReq(PacketType.ActionReq, action)
-        #         client.send(actionPacket)
+        #     for characterID in gContext["characterID"]:
+        #         if action := cliGetActionReq(characterID):
+        #             actionPacket = PacketReq(PacketType.ActionReq, action)
+        #             client.send(actionPacket)
 
         # gracefully shutdown
-        t.join()
+        # t.join()
+
+        recvAndRefresh(ui, client)
 
 
 if __name__ == "__main__":

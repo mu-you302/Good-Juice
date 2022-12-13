@@ -93,13 +93,13 @@ class JsonBase(object):
 
 
 class MasterWeaponType(JsonIntEnum):
-    PolyWatermelon = 1  # 西瓜
-    Durian = 2  # 榴莲
+    PolyWatermelon = 1
+    Durian = 2
 
 
 class SlaveWeaponType(JsonIntEnum):
-    Kiwi = 1  # 猕猴桃
-    Cactus = 2  # 仙人掌
+    Kiwi = 1
+    Cactus = 2
 
 
 class PacketType(JsonIntEnum):
@@ -141,7 +141,7 @@ class ResultType(JsonIntEnum):
 
 class Emoji(Enum):
     """Kawaii emojis!"""
-
+    Mosaic = "❓"
     WhiteBrick = "⬜"
     RedBrick = "🟥"
     GreenBrick = "🟩"
