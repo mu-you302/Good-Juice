@@ -535,11 +535,9 @@ class Model(object):
                 direc = self.DurianDirec(myPos)
                 res += Model.direc2action[direc] + "j"
             if SlaveAble:
-                if i == 0:
-                    direc = self.KiwiDirec(myPos)
-                else:
-                    direc = random.choice(list(range(6)))
+                direc = self.KiwiDirec(myPos)
                 res += Model.direc2action[direc] + "k"
+            direc = self.GetDirection(myPos, jsonCon["data"]["map"]["blocks"])
             res += Model.direc2action[direc]
 
             actionList.append(res)
@@ -551,7 +549,9 @@ class Model(object):
         # 得到6个方向的中心坐标增量
         incre = [[-2, 2], [-2, 0], [0, -2], [2, -2], [2, 0], [0, 2]]
         Add = lambda P1, P: Point(P1.x + P[0], P1.y + P[1])
-        EnemyPos = Point(self.enemyinfo["x"], self.enemyinfo["x"])
+        EnemyPos = (
+            Point(self.enemyinfo["x"], self.enemyinfo["y"]) if self.enemyinfo else None
+        )
         ContainEnemy = lambda P1, P: True if P1.x == P.x and P1.y == P.y else False
         num = [0] * 6
         for i in range(6):
@@ -611,13 +611,14 @@ class Model(object):
         if Model.iterNum == 6:
             for v in self.mapinfo.values():
                 v.clear()
-            self.mapinfo["notmine"] = [True] * (24 * 24)
-            for i in Model.obstacleIdx:
-                self.mapinfo["notmine"][i] = False
 
             Model.iterNum = 0
         else:
             Model.iterNum += 1
+
+        self.mapinfo["notmine"] = [True] * (24 * 24)
+        for i in Model.obstacleIdx:
+            self.mapinfo["notmine"][i] = False
 
         for block in blocks:
             if not block["valid"]:
@@ -696,7 +697,7 @@ class Model(object):
         des[1] = max(des[1], -20)
         self.desitination[order] = Point(*des)
 
-    def GetDirection(self, myPos: Point) -> int:
+    def GetDirection(self, myPos: Point, blocks: list[dict]) -> int:
         """返回回合结束时向哪个方向获取的信息最多
 
         Args:
@@ -705,7 +706,44 @@ class Model(object):
         Returns:
             int: 0-5
         """
-        pass
+        num = [0] * 12
+        for block in blocks:
+            if not block["valid"]:
+                continue
+            if block["color"] == self.color:
+                x, y = block["x"], block["y"]
+                if Model.Dist(Point(x, y), myPos) <= 5:
+                    if x < myPos.x and y == myPos.y:
+                        num[0] += 1
+                    elif x == myPos.x and y < myPos.y:
+                        num[2] += 1
+                    elif x > myPos.x and x + y == myPos.x + myPos.y:
+                        num[4] += 1
+                    elif x > myPos.x and y == myPos.y:
+                        num[6] += 1
+                    elif x == myPos.x and y > myPos.y:
+                        num[8] += 1
+                    elif x + y == myPos.x + myPos.y and y > myPos.y:
+                        num[10] += 1
+                    elif x < myPos.x and y < myPos.y:
+                        num[1] += 1
+                    elif x > myPos.x and y > myPos.y:
+                        num[7] += 1
+                    elif x > myPos.x and x + y < myPos.x + myPos.y:
+                        num[3] += 1
+                    elif x > myPos.x and x + y > myPos.x + myPos.y:
+                        num[5] += 1
+                    elif x < myPos.y and x + y > myPos.x + myPos.y:
+                        num[9] += 1
+                    elif x < myPos.y and x + y < myPos.x + myPos.y:
+                        num[11] += 1
+        Num = [0] * 6
+        for i in range(6):
+            for j in range(5):
+                Num[i] += num[(8 + i * 2 + j) % 12]
+        # 这里可以引入随机变量，选择最少的三个中的一个方向，我不会python...
+        n = random.choice(sorted(Num)[:3])
+        return Num.index(n)
 
     def ToDirection(P1: Point, P2: Point) -> int:
         """返回从P1移动到P2的大致方向"""
@@ -860,7 +898,7 @@ def main():
         client.connect()
 
         initPacket = PacketReq(
-            PacketType.InitReq, [cliGetInitReq(2, 1), cliGetInitReq(2, 2)]
+            PacketType.InitReq, [cliGetInitReq(2, 1), cliGetInitReq(2, 1)]
         )
         client.send(initPacket)
         # print(gContext["prompt"])
