@@ -96,12 +96,13 @@ class Client(object):
             if length <= 0:
                 break
 
-        # global fp
-
-        jsonRes = json.loads(result)
-        # json.dump(jsonRes, fp)
+        if len(result) == 0:
+            return None, None
 
         packet = PacketResp().from_json(result)
+
+        jsonRes = json.loads(result)
+
         return packet, jsonRes
 
     def __enter__(self):
@@ -114,11 +115,11 @@ class Client(object):
             return False
         return True
 
-def kmeans(data, k=3, normalize=False, limit=500):
+
+def kmeans(data, k=3, limit=500):
     """基于numpy实现kmeans聚类"""
-    if normalize:
-        stats = (data.mean(axis=0), data.std(axis=0))
-        data = (data - stats[0]) / stats[1]
+    if data.size == 0:
+        return None, None
 
     np.random.shuffle(data)
     centers = data[:k]
@@ -145,10 +146,8 @@ def kmeans(data, k=3, normalize=False, limit=500):
         else:
             centers = new_centers
 
-    if normalize:
-        centers = centers * stats[1] + stats[0]
-
     return classifications, centers
+
 
 class Model(object):
     direc2action = {0: "w", 1: "e", 2: "d", 3: "x", 4: "z", 5: "a"}
@@ -295,23 +294,25 @@ class Model(object):
     ]
     iterNum = 0
 
-    def __init__(self, chars: list) -> None:
+    def __init__(self, chars: list[dict]) -> None:
         # 其中坐标的存储方式为[[x, y], ...]
         self.mapinfo = {
             "notmine": [True] * (24 * 24),  # True表示不是自己的，可以配合blockAxis转换成坐标
             "buff_move": [],
             "buff_hp": [],
         }
-        self.blocks = [None] * (24 * 24)
-        self.enemyinfo = None
+        self.enemyinfo = [None, None]
+        self.SlavePos = []  # 记录敌方SlaveWeapon位置信息
+        self.color = None
         self.chars = chars
         self.desitination = [None, None]
-        self.color = self.chars[0]["color"]
 
     @staticmethod
     def Dist(P1: Point, P2: Point) -> int:
         """计算两点之间的距离"""
-        return (abs(P1.x - P2.x) + abs(P1.y - P2.y) + abs(P1.x + P1.y - P2.x - P2.y))/2
+        return (
+            abs(P1.x - P2.x) + abs(P1.y - P2.y) + abs(P1.x + P1.y - P2.x - P2.y)
+        ) / 2
 
     @staticmethod
     def MovePos(point: Point, direction: int) -> Point:
@@ -352,63 +353,20 @@ class Model(object):
         return point.x < 0 or point.x > 23 or point.y > 0 or point.y < -23
 
     @staticmethod
-    def IsValid(point: Point) -> bool:
-        """判断坐标是否没有围墙，这里把地图简单化了"""
-        return point.x < 21 and point.y > -21
-
-    @staticmethod
     def axis2idx(x, y) -> int:
         """根据坐标返回在数组中的索引
         地图中的格子排列:x=0, y=0~-23,x=1...所以[x, y] 在数组中对应的下标为 x*24-y
         """
         return 24 * x - y
 
-    def ExistSlave(self, Pos: Point) -> bool:
-        """判断以Pos为中心的一圈中是否存在SlaveWeapon
-
-        Args:
-            Pos (Point): 中心
-            blocks (list[dict]): _description_
-
-        Returns:
-            bool: _description_
-        """
-        P_all = [Pos]
-        for i in range(6):
-            P_all.append(Model.MovePos(Pos, i))
-
-        if sum([self.HasSlave(P) for P in P_all]) > 0:
-            return True
-
-        return False
-
-    def HasSlave(self, Pos: Point) -> bool:
-        """判断一个格子中是否有SlaveWeapon
-
-        Args:
-            Pos (Point): _description_
-            block (_type_): _description_
-
-        Returns:
-            _type_: _description_
-        """
-        if Model.IsOut(Pos):
-            return False
-        idx = Model.axis2idx(*Pos)
-        block = self.blocks[idx]
-        if block and "objs" in block:
-            obj = block["objs"][-1]["status"]
-            if "weaponType" in obj and obj["playerID"] != self.chars[0]["playerID"]:
-                return True
-        return False
-
     def action(self, jsonCon: dict) -> str:
         """返回两个角色应该采取的动作"""
-        if jsonCon["type"] == PacketType.GameOver:
-            return ""
-
         self.chars = jsonCon["data"]["characters"]
+        if self.color is None:
+            self.color = self.chars[0]["color"]
+
         actionList = []
+
         self.iterMap(jsonCon["data"]["map"]["blocks"])
 
         for i in range(2):
@@ -418,93 +376,78 @@ class Model(object):
             MasterAble = attri["masterWeapon"]["attackCDLeft"] == 0
             SlaveAble = attri["slaveWeapon"]["attackCDLeft"] == 0
 
-            # 获取自己当前的位置
             myPos = Point(attri["x"], attri["y"])
-
-            # 确定移动方向
-            if MoveAble:
-                direc = None
-                # 判断周围是否有武器和buff
-                for k in range(6):
-                    newPos = Model.MovePos(myPos, k)
-                    if self.IsOut(newPos):
-                        continue
-                    block = self.blocks[Model.axis2idx(newPos.x, newPos.y)]
-                    if block != None and "objs" in block:
-                        obj = block["objs"][0]
-                        if (
-                            "weaponType" in obj
-                            and obj["status"]["playerID"] != self.chars[0]["playerID"]
-                        ):
-                            direc = Model.AvoidSlave(k)
-                            break
-                        if "buffType" in obj["status"]:
-                            direc = k
-                            break
-
-                # 避开无敌状态的敌方
-                if self.enemyinfo != None and self.enemyinfo["isGod"]:
-                    enemyPos = Point(self.enemyinfo["x"], self.enemyinfo["y"])
-                    if Model.Dist(enemyPos, myPos) <= 4:
-                        direc = Model.ToDirection(enemyPos, myPos)
-
-                if direc is None:
-                    self.GetDestination(i, myPos, jsonCon["data"]["frame"])
-                    if self.desitination[i] != None: # GetDestionation() 还未完成
-                        direc = Model.ToDirection(myPos, self.desitination[i])
-                        x, y = Model.MovePos(myPos, direc)
-                        # 如果撞墙，不太好处理，先简单反向
-                        if (
-                            Model.IsOut(Point(x, y))
-                            or not Model.IsValid(Point(x, y))
-                        ):
-                            direc = (direc + 3) % 6
-
-                # 暂时不考虑隐身问题
-                # # 是否潜行
-                # nextPos = Model.MovePos(myPos, direc)
-                # if self.blocks[Model.axis2idx(*nextPos)]["color"] == self.color:
-                #     res += Model.direc2action[direc] + "su"
-                # else:
-                #     res += Model.direc2action[direc] + "is"
-                if direc:
-                    res += Model.direc2action[direc] + "s" 
 
             if MasterAble:
                 direc = self.DurianDirec(myPos)
                 res += Model.direc2action[direc] + "j"
-
             if SlaveAble:
                 direc = self.KiwiDirec(myPos)
                 res += Model.direc2action[direc] + "k"
 
-            if not res:
-                direc = random.choice(list(range(6)))
-                res += Model.direc2action[direc]
+            if MoveAble:
+                direc = None
+                # 判断周围是否有buff
+                for k in range(6):
+                    newPos = Model.MovePos(myPos, k)
+                    if self.IsOut(newPos):
+                        continue
+                    newPos = [*newPos]
+                    if (
+                        newPos in self.mapinfo["buff_move"]
+                        or newPos in self.mapinfo["buff_hp"]
+                    ):
+                        direc = k
+                        break
+
+                if direc is None:
+                    self.GetDestination(i, myPos, jsonCon["data"]["frame"])
+                    direc = Model.ToDirection(myPos, self.desitination[i])
+                    x, y = Model.MovePos(myPos, direc)
+                    # 如果撞墙，不太好处理，先简单反向
+                    if Model.IsOut(Point(x, y)):
+                        direc = (direc + 3) % 6
+
+                res += Model.direc2action[direc] + "s"
+
+            # 生成回合结束时的方向
+            Direc = [
+                (attri["direction"] + 3) % 6,
+                (attri["direction"] + 4) % 6,
+                (attri["direction"] + 2) % 6,
+            ]
+            direc = random.choice(Direc)
+            res += Model.direc2action[direc]
 
             actionList.append(res)
+
         return actionList
 
     def DurianDirec(self, myPos: Point) -> int:
-        """返回释放猕猴桃的最佳方向"""
+        """返回释放榴莲的最佳方向"""
         # 得到6个方向的中心坐标增量
         incre = [[-2, 2], [-2, 0], [0, -2], [2, -2], [2, 0], [0, 2]]
         Add = lambda P1, P: Point(P1.x + P[0], P1.y + P[1])
-        ContainEnemy = lambda P1, P: True if P1.x == P.x and P1.y == P.y else False
+        SamePos = lambda P1, P: True if P1.x == P.x and P1.y == P.y else False
         num = [0] * 6
         for i in range(6):
             P_center = Add(myPos, incre[i])
             P_all = [P_center]  # 一个方向上覆盖的所有点
             for j in range(6):
                 P_all.append(Model.MovePos(P_center, j))
-            if self.enemyinfo:
-                EnemyPos = Point(self.enemyinfo["x"], self.enemyinfo["y"])
-                if sum([ContainEnemy(Pos, EnemyPos) for Pos in P_all]) > 0:
+            # 是否有敌人
+            for enemy in self.enemyinfo:
+                if (not enemy) or enemy["isGod"] or (not enemy["isAlive"]):
+                    continue
+                P_enemy = Point(enemy["x"], enemy["y"])
+                if sum([SamePos(P_enemy, P) for P in P_all]):
                     return i
             # 如果范围内有敌方武器
-            if self.ExistSlave(P_center):
-                return i
+            for slave in self.SlavePos:
+                if Point(*slave) in P_all:
+                    return i
             num[i] = sum([self.IsOccupiable(Pos) for Pos in P_all])
+
         return num.index(max(num))
 
     def KiwiDirec(self, myPos: Point) -> int:
@@ -518,26 +461,62 @@ class Model(object):
                 Pos = Add(Pos, incre[i])
                 if self.IsOccupiable(Pos):
                     num[i] += 1
+
         return num.index(max(num))
 
-    def CactusDirec(self, myPos: Point) -> int:
-        """返回释放仙人掌的最佳方向
-
-        Args:
-            myPos (Point): 当前位置
-
-        Returns:
-            int: 方向，0-5
-        """
-        pass
-
-    def IsOccupiable(self, Pos: Point) -> bool:
+    def IsOccupiable(self, Pos) -> bool:
         """判断一个格子是否能被占据"""
         if Model.IsOut(Pos):
             return False
         idx = Model.axis2idx(*Pos)
-        block = self.blocks[idx]
-        return block != None and self.IsValid(Pos) and block["color"] != self.color
+        return self.mapinfo["notmine"][idx]
+
+    def iterMap(self, blocks: list[dict]):
+        """遍历地图中的blocks数组获取信息
+        Args:
+            blocks (list[dict]): length:16*16
+            call:self.iterMap(jsonCon["data"]["map"]["blocks"])
+            init: if it's the fitst call
+        """
+        # 每过6轮将已有的信息清空
+        if Model.iterNum == 6:
+            for v in self.mapinfo.values():
+                v.clear()
+            self.enemyinfo = [None, None]
+            Model.iterNum = 0
+        else:
+            Model.iterNum += 1
+
+        self.mapinfo["notmine"] = [True] * (24 * 24)
+        for i in Model.obstacleIdx:
+            self.mapinfo["notmine"][i] = False
+        self.SlavePos.clear()
+
+        for block in blocks:
+            if not block["valid"]:
+                continue
+            if block["color"] == self.color:  # 标记自己的格点
+                x, y = block["x"], block["y"]
+                self.mapinfo["notmine"][Model.axis2idx(x, y)] = False
+            if "objs" in block and block["x"] < 21 and block["y"] > -21:  # 有不在障碍区内的特殊单位
+                obj = block["objs"][-1]
+                if (
+                    obj["type"] == 1
+                    and obj["status"]["playerID"] != self.chars[0]["playerID"]
+                ):
+                    n = obj["status"]["characterID"]
+                    self.enemyinfo[n] = obj["status"]  # 记录敌方信息
+                elif obj["type"] == 2 and obj["status"]["buffType"] == 1:
+                    self.mapinfo["buff_move"].append([block["x"], block["y"]])
+                elif obj["type"] == 2 and obj["status"]["buffType"] == 2:
+                    self.mapinfo["buff_hp"].append([block["x"], block["y"]])
+                elif (
+                    obj["type"] == 3
+                    and obj["status"]["playerID"] != self.chars[0]["playerID"]
+                ):
+                    self.SlavePos.append([block["x"], block["y"]])
+
+        return
 
     def GetDestination(self, order: int, myPos: Point, round) -> None:
         """获取目标点
@@ -561,6 +540,7 @@ class Model(object):
             if dist and min(dist) < 6:
                 idx = dist.index(min(dist))
                 self.desitination[order] = Point(*self.mapinfo["buff_hp"][idx])
+                # self.mapinfo["buff_hp"].pop(idx)
                 return
 
         # 判断附近是否有移速buff
@@ -573,43 +553,34 @@ class Model(object):
                 self.desitination[order] = Point(*self.mapinfo["buff_move"][idx])
                 return
 
-    def iterMap(self, blocks):
-        """遍历地图中的blocks数组获取信息
+        X = Model.blockAxis[self.mapinfo["notmine"]]
+        X_mine = np.array(myPos)
+        n_cluster = min(int(round / 20) + 1, 10)
 
-        Args:
-            blocks (list[dict]): length:24*24
-            call:self.iterMap(jsonCon["data"]["map"]["blocks"])
-            init: if it's the fitst call
-        """
-        # 每过6轮将已有的信息清空
-        if Model.iterNum == 6:
-            for v in self.mapinfo.values():
-                v.clear()
-            self.mapinfo["notmine"] = [True] * (24 * 24)
-            for i in Model.obstacleIdx:
-                self.mapinfo["notmine"][i] = False
-            Model.iterNum = 0
+        labels, centers = kmeans(X, k=n_cluster)
+        if labels is None:
+            return
+        # 统计每一个cluster中的点数量
+        num_clusters = np.bincount(labels)
+        # 直接用bincount得到的结果可能少了一个
+        while num_clusters.shape[0] < centers.shape[0]:
+            num_clusters = np.append(num_clusters, 0)
+        # 计算每个聚类中心离当前位置的距离
+        dist2center = np.abs(centers - X_mine).sum(axis=1)
+
+        # 综合考虑，同时使两个角色尽可能分开
+        if order == 0:
+            cret = -0.6 * num_clusters + dist2center
         else:
-            Model.iterNum += 1
+            dist2char0 = np.abs(centers - self.desitination[0]).sum(axis=1)
+            cret = -0.6 * num_clusters + dist2center - 0.6 * dist2char0
 
-        for block in blocks:
-            # 地图中blocks信息储存到self.blocks中
-            block_x = block["x"]
-            block_y = block["y"]
-            self.blocks[Model.axis2idx(block_x, block_y)] = block
-            if block["color"] != self.color:
-                self.mapinfo["notmine"][Model.axis2idx(block_x, block_y)] = False
-            if "objs" in block and block_x < 21 and block_y > -21:  # 有特殊单位
-                obj = block["objs"][-1]
-                if (
-                    obj["type"] == 1
-                    and obj["status"]["playerID"] != self.chars[0]["playerID"]
-                ):
-                    self.enemyinfo = obj["status"] # 记录敌方信息
-                elif obj["type"] == 2 and obj["status"]["buffType"] == 1:
-                    self.mapinfo["buff_move"].append([block_x, block_y])
-                elif obj["type"] == 2 and obj["status"]["buffType"] == 2:
-                    self.mapinfo["buff_hp"].append([block_x, block_y])
+        maxIdx = np.argmin(cret)
+        des = centers[maxIdx]
+
+        des[0] = min(des[0], 20)
+        des[1] = max(des[1], -20)
+        self.desitination[order] = Point(*des)
 
     def ToDirection(P1: Point, P2: Point) -> int:
         """返回从P1移动到P2的大致方向"""
@@ -660,6 +631,8 @@ def cliGetActionReq(characterID: int, actions):
     }
 
     actionReqs = []
+
+    # actions = input()
 
     for s in get_action(actions):
         actionReq = ActionReq(characterID, *str2action[s])
@@ -718,18 +691,25 @@ def recvAndRefresh(ui: UI, client: Client):
             gContext["gameBeginFlag"] = True
 
             model = Model(res["data"]["characters"])
-            model.iterMap(res["data"]["map"]["blocks"])  # 遍历map
+            # model.iterMap(res["data"]["map"]["blocks"], init=True)  # 遍历map
 
     while resp.type != PacketType.GameOver:
         resp, res = client.recv()
+        if not res:
+            continue
+        if res["type"] == PacketType.GameOver:
+            break
+
         refreshUI(ui, resp)
 
         actionStr = model.action(res)
-        # 两个角色分别发送
-        for i in range(2):
-            action = cliGetActionReq(gContext["characterID"][i], actionStr[i])
-            actionPacket = PacketReq(PacketType.ActionReq, action)
-            client.send(actionPacket)
+        actions = [cliGetActionReq(i, actionStr[i]) for i in range(2)]
+        actionPackets = [PacketReq(PacketType.ActionReq, a) for a in actions]
+        # 双线程发送
+        t = [Thread(target=Client.send, args=(client, a)) for a in actionPackets]
+        for i in t:
+            i.start()
+            i.join()
 
     refreshUI(ui, resp)
     print(f"Game Over!")
@@ -759,7 +739,7 @@ def main():
         client.connect()
 
         initPacket = PacketReq(
-            PacketType.InitReq, [cliGetInitReq(2, 1), cliGetInitReq(1, 2)]
+            PacketType.InitReq, [cliGetInitReq(2, 1), cliGetInitReq(2, 1)]
         )
         client.send(initPacket)
         # print(gContext["prompt"])
