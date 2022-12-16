@@ -416,6 +416,7 @@ class Model(object):
                             direc = (direc + 3) % 6
 
                     res += Model.direc2action[direc] + "s"
+                    print(res)
 
             if  not IsSneaky and SneakyAble and self.mapinfo["notmine"][Model.axis2idx(x, y)] == False:
                 res += "u"
@@ -578,10 +579,10 @@ class Model(object):
 
         # 综合考虑，同时使两个角色尽可能分开
         if order == 0:
-            cret = -0.6 * num_clusters + dist2center
+            cret = -0.8 * num_clusters + dist2center
         else:
             dist2char0 = np.abs(centers - self.desitination[0]).sum(axis=1)
-            cret = -0.6 * num_clusters + dist2center - 0.6 * dist2char0
+            cret = -0.8 * num_clusters + dist2center - 0.8 * dist2char0
 
         maxIdx = np.argmin(cret)
         des = centers[maxIdx]
@@ -622,7 +623,7 @@ class Model(object):
             return random.choice([3, 4])
         elif P2.x < P1.x and P2.x + P2.y > P1.x + P1.y:
             return random.choice([5, 0])
-        elif P2.x < P1.x and P2.x +P2.y < P1.x + P1.y :
+        else: 
             return random.choice([0, 1])
 
 
